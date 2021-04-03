@@ -54,7 +54,7 @@ export class FourNetScrapper {
         for (let i = -daysBack; i <= daysFwd; i++) {
             console.log(`Fetching day ${i}`);
             const date = new Date();
-            date.setDate(date.getDate() + i + 1);
+            date.setDate(date.getDate() + i);
 
             const epg = await this.getDeepEpgByDate(date, epgIds);
 

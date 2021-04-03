@@ -34,7 +34,7 @@ export class FourNetApi {
             if (!this.session) reject('Session not initialized');
 
             const body = {
-                date: `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`,
+                date: `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}-${date.getUTCDate()}`,
                 epg_ids: epgIds
             }
 
