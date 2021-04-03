@@ -88,8 +88,8 @@ export class FourNetScrapper {
             const src = channel.content_sources[0].stream_profile_urls.adaptive;
             const epgId = `${channel.id_epg}.dvb.guide`;
 
-            //result += `#EXTINF:-1 tvg-ID="${epgId}" tvg-logo="${logo}" catchup="default" catchup-source="${catchupUrl}?start={utc}&end={utcend}&channel=${channel.id}" catchup-days="1", ${name}\n`;
-            result += `#EXTINF:-1 tvg-ID="${epgId}" tvg-logo="${logo}", ${name}\n`;
+            result += `#EXTINF:-1 tvg-ID="${epgId}" tvg-logo="${logo}" catchup="default" catchup-source="${catchupUrl}?start={utc}&end={utcend}&channel=${channel.id}" catchup-days="1", ${name}\n`;
+            //result += `#EXTINF:-1 tvg-ID="${epgId}" tvg-logo="${logo}", ${name}\n`;
             result += src + '\n\n';
         })
 
