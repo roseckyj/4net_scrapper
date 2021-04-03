@@ -53,5 +53,5 @@ app.listen(port, () => {
 
 // Heroku upkeeper
 if (process.env.UPKEEP_URL) {
-    setInterval(() => axios.get(process.env.UPKEEP_URL), 10000);
+    setInterval(() => axios.get(process.env.UPKEEP_URL), 1000 * 60);
 }
