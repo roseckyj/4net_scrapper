@@ -24,7 +24,6 @@ export class FourNetApi {
                     resolve(response.data);
                 })
                 .catch((e) => {
-                    console.error(e);
                     reject('Error fetching sources');
                 });
         });
@@ -45,7 +44,6 @@ export class FourNetApi {
                     resolve(response.data);
                 })
                 .catch((e) => {
-                    console.error(e);
                     reject('Error fetching EPG');
                 });
         });
@@ -65,7 +63,6 @@ export class FourNetApi {
                     resolve(response.data);
                 })
                 .catch((e) => {
-                    console.error(e);
                     reject('Error fetching broadcast detail');
                 });
         });
@@ -87,7 +84,6 @@ export class FourNetApi {
                     resolve(response.data);
                 })
                 .catch((e) => {
-                    console.error(e);
                     reject('Error fetching content');
                 });
         });
@@ -110,7 +106,6 @@ export class FourNetApi {
                     try {
                         resolve(response.headers['set-cookie'][0].split("=")[1].split(";")[0]);
                     } catch (e) {
-                        console.error(e);
                         reject('Error parsing received headers');
                     }
                 })
