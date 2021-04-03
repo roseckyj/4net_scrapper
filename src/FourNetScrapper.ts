@@ -1,6 +1,7 @@
 import { FourNetApi } from "./FourNetApi"
 import { broadcast, broadcastDetail } from "./types"
 import * as fs from 'fs';
+import axios from "axios";
 
 export class FourNetScrapper {
     private api: FourNetApi;
@@ -79,7 +80,7 @@ export class FourNetScrapper {
 
         sources.channels.map((channel) => {
             const logo = `https://red-cache.poda.4net.tv/channel/logo/${channel.id}.png`;
-            const name = `https://red-cache.poda.4net.tv/channel/logo/${channel.name}.png`;
+            const name = channel.name;
             const src = channel.content_sources[0].stream_profile_urls.adaptive;
             const epgId = `${channel.id_epg}.dvb.guide`;
 
@@ -88,6 +89,27 @@ export class FourNetScrapper {
         })
 
         return result;
+    }
+
+    public async getCatchup(channelId: number, startTimestamp: number, endTimestamp: number) {
+        if (!this.initialized) await this.init();
+        const content = await this.api.getContent(channelId, startTimestamp, endTimestamp);
+
+        return new Promise((resolve, reject) => {
+            axios
+                .get(content.stream_uri)
+                .then((response) => {
+                    var pathArray = content.stream_uri.split( '/' );
+                    var protocol = pathArray[0];
+                    var host = pathArray[2];
+                    var url = protocol + '//' + host;
+                    resolve((response.data as string).replace("/at/", url + "/at/"));
+                })
+                .catch((e) => {
+                    console.error(e);
+                    reject('Cannot load catchup playlist');
+                });
+        });
     }
 
     private htmlEncode(s?: string) {

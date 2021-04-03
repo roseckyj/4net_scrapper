@@ -15,6 +15,16 @@ export interface getBroadcastDetailResponse {
     broadcast: broadcastDetail
 }
 
+export interface getContentResponse {
+    success: boolean,
+    stream_uri: URL,
+    protocol: string,
+    duration: number,
+    overlap_pre: number,
+    overlap_post: number,
+    session_auth: boolean
+  }
+
 
 export interface linearProtocolOrder {
     id: number,

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getBroadcastDetailResponse, getEpgByDateResponse, getSourcesResponse } from './types'
+import { getBroadcastDetailResponse, getContentResponse, getEpgByDateResponse, getSourcesResponse } from './types'
 
 export class FourNetApi {
     private session: string;
@@ -67,6 +67,28 @@ export class FourNetApi {
                 .catch((e) => {
                     console.error(e);
                     reject('Error fetching broadcast detail');
+                });
+        });
+    }
+
+    public async getContent(channelId: number, startTimestamp: number, endTimestamp: number): Promise<getContentResponse> {
+        return new Promise((resolve, reject) => {
+            if (!this.session) reject('Session not initialized');
+
+            const body = {
+                channel_id: channelId,
+                start: startTimestamp,
+                end: endTimestamp
+            }
+
+            axios
+                .post(this.apiUrl + 'getContent', body, this.headers)
+                .then((response) => {
+                    resolve(response.data);
+                })
+                .catch((e) => {
+                    console.error(e);
+                    reject('Error fetching content');
                 });
         });
     }
