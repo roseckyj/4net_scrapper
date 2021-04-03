@@ -2,11 +2,12 @@ import axios from "axios";
 import * as express from "express";
 import * as dotenv from 'dotenv';
 import { FourNetScrapper } from "./FourNetScrapper";
+import * as path from "path";
 
 dotenv.config();
 
-const EPG_FILENAME = __dirname + "/../epg/all.xml"
-const EPG_TMP_FILENAME = __dirname + "/../epg/tmp.xml"
+const EPG_FILENAME = path.resolve(__dirname, "../epg/all.xml");
+const EPG_TMP_FILENAME =path.resolve(__dirname, "../epg/tmp.xml");
 
 const scrapper = new FourNetScrapper(process.env.API_URL, process.env.TOKEN, "cs");
 const app = express();
