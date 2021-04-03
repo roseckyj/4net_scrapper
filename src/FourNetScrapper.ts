@@ -16,19 +16,25 @@ export class FourNetScrapper {
         this.initialized = true;
     }
 
-    private async getDeepEpgByDate(date: Date, epgIds: number[]): Promise<broadcastsWithDetail> {
+    private async getDeepEpgByDate(date: Date, epgIds: number[]): Promise<{[key: string]: broadcastWithDetail}> {
         const epgs = await this.api.getEpgByDate(date, epgIds);
-        const result: broadcastsWithDetail = {};
+        let arr: broadcastWithDetail[] = [];
         for (const id in epgs.broadcasts) {
-            result[id] = await Promise.all(epgs.broadcasts[id].map(async (bc) => {
+            arr = arr.concat(await Promise.all(epgs.broadcasts[id].map(async (bc) => {
                 try {
                     const detail = (await this.api.getBroadcastDetail(bc.id)).broadcast;
                     return {...bc, ...detail};
                 } catch {
                     return {...bc} as broadcastWithDetail;
                 }
-            }));
+            })));
         }
+
+        // To prevent duplicates
+        const result: {[key: string]: broadcastWithDetail} = {};
+        arr.forEach((detail) => {
+            result[detail.id] = detail;
+        })
         return result;
     }
 
@@ -52,16 +58,14 @@ export class FourNetScrapper {
 
             const epg = await this.getDeepEpgByDate(date, epgIds);
 
-            Object.keys(epg).forEach((key) => {
-                epg[key].forEach((detail) => {
-                    stream.write(`<programme start="${this.formatXMLDate(detail.startTimestamp)}" stop="${this.formatXMLDate(detail.endTimestamp)}" channel="${detail.epg_id}.dvb.guide">\n`);
-                    stream.write(`<title lang="${this.language}">${this.htmlEncode(detail.name)}</title>\n`);
-                    stream.write(`<sub-title lang="${this.language}">${this.htmlEncode(detail.liveShortDescription)}</sub-title>\n`);
-                    stream.write(`<desc lang="${this.language}">${this.htmlEncode(detail.longDescription) + (detail.csfd ? ` (ČSFD ${detail.csfd}%)` : '')}</desc>\n`);
-                    if (detail.format) stream.write(`<category lang="${this.language}">${this.htmlEncode(detail.format)}</category>\n`);
-                    if (detail.images && detail.images.poster) stream.write(`<icon src="${detail.images.poster}"></icon>\n`);
-                    stream.write(`</programme>\n\n`);
-                })
+            Object.values(epg).forEach((detail) => {
+                stream.write(`<programme start="${this.formatXMLDate(detail.startTimestamp)}" stop="${this.formatXMLDate(detail.endTimestamp)}" channel="${detail.epg_id}.dvb.guide">\n`);
+                stream.write(`<title lang="${this.language}">${this.htmlEncode(detail.name)}</title>\n`);
+                stream.write(`<sub-title lang="${this.language}">${this.htmlEncode(detail.liveShortDescription)}</sub-title>\n`);
+                stream.write(`<desc lang="${this.language}">${this.htmlEncode(detail.longDescription) + (detail.csfd ? ` (ČSFD ${detail.csfd}%)` : '')}</desc>\n`);
+                if (detail.format) stream.write(`<category lang="${this.language}">${this.htmlEncode(detail.format)}</category>\n`);
+                if (detail.images && detail.images.poster) stream.write(`<icon src="${detail.images.poster}"></icon>\n`);
+                stream.write(`</programme>\n\n`);
             })
             console.log(`Day ${i} completed`);
         }
@@ -84,7 +88,8 @@ export class FourNetScrapper {
             const src = channel.content_sources[0].stream_profile_urls.adaptive;
             const epgId = `${channel.id_epg}.dvb.guide`;
 
-            result += `#EXTINF:-1 catchup="default" catchup-source="${catchupUrl}?start={utc}&end={utcend}&channel=${channel.id}" catchup-days="1" tvg-ID="${epgId}" tvg-logo="${logo}", ${name}\n`;
+            //result += `#EXTINF:-1 tvg-ID="${epgId}" tvg-logo="${logo}" catchup="default" catchup-source="${catchupUrl}?start={utc}&end={utcend}&channel=${channel.id}" catchup-days="1", ${name}\n`;
+            result += `#EXTINF:-1 tvg-ID="${epgId}" tvg-logo="${logo}", ${name}\n`;
             result += src + '\n\n';
         })
 
@@ -135,4 +140,3 @@ export class FourNetScrapper {
 }
 
 interface broadcastWithDetail extends broadcast, broadcastDetail { }
-type broadcastsWithDetail = { [key: string]: broadcastWithDetail[] };
