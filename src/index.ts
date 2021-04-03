@@ -15,7 +15,7 @@ const port = process.env.PORT || 80;
 
 console.log(`Path to EPG file set to '${EPG_FILENAME}'`);
 
-let lastTime = new Date();
+let lastTime = new Date(0);
 setInterval(() => {
     if (lastTime.getDate() !== new Date().getDate()) {
         console.log("Creating new EPG...");
