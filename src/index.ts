@@ -13,7 +13,7 @@ const app = express();
 const port = process.env.PORT || 80;
 
 
-let lastTime = new Date();
+let lastTime = new Date(0);
 setInterval(() => {
     if (lastTime.getDate() !== new Date().getDate()) {
         console.log("Creating new EPG...");
@@ -32,7 +32,7 @@ app.get('/list', async (req, res) => {
     res.send(await scrapper.getBasePlaylist(req.protocol + '://' + req.get('host')));
 });
 
-app.get('/get', (req, res) => {
+app.get('/epg', (req, res) => {
     res.sendFile(EPG_FILENAME);
 });
 
