@@ -1,0 +1,111 @@
+import { FourNetApi } from "./FourNetApi"
+import { broadcast, broadcastDetail } from "./types"
+import * as fs from 'fs';
+
+export class FourNetScrapper {
+    private api: FourNetApi;
+    private initialized: boolean = false;
+
+    constructor(apiUrl: string, token: string, language: string = "en") {
+        this.api = new FourNetApi(apiUrl, token);
+    }
+    
+    private async init() {
+        await this.api.init();
+        this.initialized = true;
+    }
+
+    private async getDeepEpgByDate(date: Date, epgIds: number[]): Promise<broadcastsWithDetail> {
+        const epgs = await this.api.getEpgByDate(date, epgIds);
+        const result: broadcastsWithDetail = {};
+        for (const id in epgs.broadcasts) {
+            result[id] = await Promise.all(epgs.broadcasts[id].map(async (bc) => {
+                try {
+                    const detail = (await this.api.getBroadcastDetail(bc.id)).broadcast;
+                    return {...bc, ...detail};
+                } catch {
+                    return {...bc} as broadcastWithDetail;
+                }
+            }));
+        }
+        return result;
+    }
+
+    public async createEpgFile(path: string, tmpPath: string, daysFwd: number, daysBack: number = 0) {
+        if (!this.initialized) await this.init();
+
+        const channels = await (await this.api.getSources()).channels;
+        const epgIds = channels.map((channel) => channel.id_epg);
+
+        const stream = fs.createWriteStream(tmpPath);
+        stream.write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE tv SYSTEM "xmltv.dtd">\n<tv>\n\n');
+
+        channels.forEach((channel) => {
+            stream.write(`<channel id="${channel.id_epg}.dvb.guide">\n<display-name>${channel.name}</display-name>\n</channel>\n\n`);
+        })
+
+        for (let i = -daysBack; i <= daysFwd; i++) {
+            console.log(`Fetching day ${i}`);
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+
+            const epg = await this.getDeepEpgByDate(date, epgIds);
+
+            Object.keys(epg).forEach((key) => {
+                epg[key].forEach((detail) => {
+                    stream.write(`<programme id="${detail.id}" start="${this.formatXMLDate(detail.startTimestamp)}" stop="${this.formatXMLDate(detail.endTimestamp)}" channel="${detail.epg_id}.dvb.guide">\n`);
+                    stream.write(`<title lang="cs">${this.htmlEncode(detail.name)}</title>\n`);
+                    stream.write(`<sub-title lang="cs">${this.htmlEncode(detail.liveShortDescription)}</sub-title>\n`);
+                    stream.write(`<desc lang="cs">${this.htmlEncode(detail.longDescription) + (detail.csfd ? ` (ČSFD ${detail.csfd}%)` : '')}</desc>\n`);
+                    if (detail.format) stream.write(`<category lang="cs">${this.htmlEncode(detail.format)}</category>\n`);
+                    if (detail.images && detail.images.poster) stream.write(`<icon src="${detail.images.poster}"></icon>\n`);
+                    stream.write(`</programme>\n\n`);
+                })
+            })
+            console.log(`Day ${i} completed`);
+        }
+
+        stream.write('</tv>');
+        stream.close();
+        console.log("EPG file generated!");
+        fs.rename(tmpPath, path, () => console.log("Moved!"));
+    }
+
+    public async getBasePlaylist(catchupUrl: string) {
+        if (!this.initialized) await this.init();
+
+        const sources = await this.api.getSources();
+        let result = "#EXTM3U\n";
+
+        sources.channels.map((channel) => {
+            const logo = `https://red-cache.poda.4net.tv/channel/logo/${channel.id}.png`;
+            const name = `https://red-cache.poda.4net.tv/channel/logo/${channel.name}.png`;
+            const src = channel.content_sources[0].stream_profile_urls.adaptive;
+            const epgId = `${channel.id_epg}.dvb.guide`;
+
+            result += `#EXTINF:-1 catchup="default" catchup-source="${catchupUrl}?start={utc}&end={utcend}&channel=${channel.id}" catchup-days="1" tvg-ID="${epgId}" tvg-logo="${logo}", ${name}\n`;
+            result += src + '\n\n';
+        })
+
+        return result;
+    }
+
+    private htmlEncode(s?: string) {
+        if (!s) {
+            return "";
+        }
+        return s.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/'/g, '&#39;')
+            .replace(/"/g, '&#34;');
+    }
+
+    private formatXMLDate(timestamp: number) {
+        const date = new Date(timestamp);
+        return `${date.getUTCFullYear()}${date.getUTCMonth()}${date.getUTCDate()}${date.getUTCHours()}${date.getUTCMinutes()}${date.getUTCSeconds()} +0000`;
+    }
+}
+
+interface broadcastWithDetail extends broadcast, broadcastDetail { }
+type broadcastsWithDetail = { [key: string]: broadcastWithDetail[] };
