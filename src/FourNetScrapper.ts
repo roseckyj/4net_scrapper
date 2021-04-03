@@ -7,7 +7,7 @@ export class FourNetScrapper {
     private api: FourNetApi;
     private initialized: boolean = false;
 
-    constructor(apiUrl: string, token: string, language: string = "en") {
+    constructor(apiUrl: string, token: string, private language: string = "en") {
         this.api = new FourNetApi(apiUrl, token);
     }
     
@@ -48,17 +48,17 @@ export class FourNetScrapper {
         for (let i = -daysBack; i <= daysFwd; i++) {
             console.log(`Fetching day ${i}`);
             const date = new Date();
-            date.setDate(date.getDate() + i);
+            date.setDate(date.getDate() + i + 1);
 
             const epg = await this.getDeepEpgByDate(date, epgIds);
 
             Object.keys(epg).forEach((key) => {
                 epg[key].forEach((detail) => {
-                    stream.write(`<programme id="${detail.id}" start="${this.formatXMLDate(detail.startTimestamp)}" stop="${this.formatXMLDate(detail.endTimestamp)}" channel="${detail.epg_id}.dvb.guide">\n`);
-                    stream.write(`<title lang="cs">${this.htmlEncode(detail.name)}</title>\n`);
-                    stream.write(`<sub-title lang="cs">${this.htmlEncode(detail.liveShortDescription)}</sub-title>\n`);
-                    stream.write(`<desc lang="cs">${this.htmlEncode(detail.longDescription) + (detail.csfd ? ` (ČSFD ${detail.csfd}%)` : '')}</desc>\n`);
-                    if (detail.format) stream.write(`<category lang="cs">${this.htmlEncode(detail.format)}</category>\n`);
+                    stream.write(`<programme start="${this.formatXMLDate(detail.startTimestamp)}" stop="${this.formatXMLDate(detail.endTimestamp)}" channel="${detail.epg_id}.dvb.guide">\n`);
+                    stream.write(`<title lang="${this.language}">${this.htmlEncode(detail.name)}</title>\n`);
+                    stream.write(`<sub-title lang="${this.language}">${this.htmlEncode(detail.liveShortDescription)}</sub-title>\n`);
+                    stream.write(`<desc lang="${this.language}">${this.htmlEncode(detail.longDescription) + (detail.csfd ? ` (ČSFD ${detail.csfd}%)` : '')}</desc>\n`);
+                    if (detail.format) stream.write(`<category lang="${this.language}">${this.htmlEncode(detail.format)}</category>\n`);
                     if (detail.images && detail.images.poster) stream.write(`<icon src="${detail.images.poster}"></icon>\n`);
                     stream.write(`</programme>\n\n`);
                 })
