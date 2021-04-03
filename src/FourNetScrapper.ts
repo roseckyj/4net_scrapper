@@ -124,8 +124,13 @@ export class FourNetScrapper {
     }
 
     private formatXMLDate(timestamp: number) {
-        const date = new Date(timestamp);
-        return `${date.getUTCFullYear()}${date.getUTCMonth()}${date.getUTCDate()}${date.getUTCHours()}${date.getUTCMinutes()}${date.getUTCSeconds()} +0000`;
+        const date = new Date(timestamp * 1000);
+        return `${date.getUTCFullYear()}${
+            (date.getUTCMonth() + 1).toString().padStart(2, '0')}${
+            date.getUTCDate().toString().padStart(2, '0')}${
+            date.getUTCHours().toString().padStart(2, '0')}${
+            date.getUTCMinutes().toString().padStart(2, '0')}${
+            date.getUTCSeconds().toString().padStart(2, '0')} +0000`;
     }
 }
 
