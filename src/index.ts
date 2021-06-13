@@ -17,18 +17,18 @@ console.log(`Path to EPG file set to '${EPG_FILENAME}'`);
 
 // Start timer for EPG generation
 let lastTime = new Date(0);
-setInterval(() => {
+setInterval(() => fetchEpg(), 1000 * 60);
+
+function fetchEpg() {
     if (lastTime.getDate() !== new Date().getDate()) {
         console.log('Creating new EPG...');
-        scrapper
-            .createEpgFile(EPG_FILENAME, EPG_TMP_FILENAME, 4, 1)
-            .catch(() => {
-                console.log('Creating EPG failed, trying again...');
-                lastTime = new Date(0);
-            });
+        scrapper.createEpgFile(EPG_FILENAME, EPG_TMP_FILENAME, 4, 1).catch(() => {
+            console.log('Creating EPG failed, trying again...');
+            lastTime = new Date(0);
+        });
         lastTime = new Date();
     }
-}, 1000 * 60);
+}
 
 // Disable caching
 app.set('etag', false);
@@ -72,3 +72,6 @@ app.listen(port, () => {
 if (process.env.UPKEEP_URL) {
     setInterval(() => axios.get(process.env.UPKEEP_URL), 1000 * 60);
 }
+
+
+fetchEpg();

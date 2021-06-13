@@ -1,7 +1,8 @@
 import { FourNetApi } from "./FourNetApi"
-import { broadcast, broadcastDetail } from "./types"
+import { broadcast, broadcastDetail, getEpgByDateResponse } from "./types"
 import * as fs from 'fs';
 import axios from "axios";
+import { forTime } from "waitasecond";
 
 export class FourNetScrapper {
     private api: FourNetApi;
@@ -17,7 +18,18 @@ export class FourNetScrapper {
     }
 
     private async getDeepEpgByDate(date: Date, epgIds: number[]): Promise<{[key: string]: broadcastWithDetail}> {
-        const epgs = await this.api.getEpgByDate(date, epgIds);
+        let epgs: null | getEpgByDateResponse = null;
+        let tries = 0;
+        do {
+            try {
+                epgs = await this.api.getEpgByDate(date, epgIds);
+            } catch {
+                await forTime(10 * 1000);
+            }
+            tries++;
+        } while (epgs == null && tries < 10);
+        if (epgs == null) throw "Cannot fetch epg";
+        
         let arr: broadcastWithDetail[] = [];
         for (const id in epgs.broadcasts) {
             arr = arr.concat(await Promise.all(epgs.broadcasts[id].map(async (bc) => {
@@ -56,18 +68,23 @@ export class FourNetScrapper {
             const date = new Date();
             date.setDate(date.getDate() + i);
 
-            const epg = await this.getDeepEpgByDate(date, epgIds);
+            try {
+                const epg = await this.getDeepEpgByDate(date, epgIds);
 
-            Object.values(epg).forEach((detail) => {
-                stream.write(`<programme start="${this.formatXMLDate(detail.startTimestamp)}" stop="${this.formatXMLDate(detail.endTimestamp)}" channel="${detail.epg_id}.dvb.guide">\n`);
-                stream.write(`<title lang="${this.language}">${this.htmlEncode(detail.name)}</title>\n`);
-                stream.write(`<sub-title lang="${this.language}">${this.htmlEncode(detail.liveShortDescription)}</sub-title>\n`);
-                stream.write(`<desc lang="${this.language}">${this.htmlEncode(detail.longDescription) + (detail.csfd ? ` (ČSFD ${detail.csfd}%)` : '')}</desc>\n`);
-                if (detail.format) stream.write(`<category lang="${this.language}">${this.htmlEncode(detail.format)}</category>\n`);
-                if (detail.images && detail.images.poster) stream.write(`<icon src="${detail.images.poster}"></icon>\n`);
-                stream.write(`</programme>\n\n`);
-            })
-            console.log(`Day ${i} completed`);
+                Object.values(epg).forEach((detail) => {
+                    stream.write(`<programme start="${this.formatXMLDate(detail.startTimestamp)}" stop="${this.formatXMLDate(detail.endTimestamp)}" channel="${detail.epg_id}.dvb.guide">\n`);
+                    stream.write(`<title lang="${this.language}">${this.htmlEncode(detail.name)}</title>\n`);
+                    stream.write(`<sub-title lang="${this.language}">${this.htmlEncode(detail.liveShortDescription)}</sub-title>\n`);
+                    stream.write(`<desc lang="${this.language}">${this.htmlEncode(detail.longDescription) + (detail.csfd ? ` (ČSFD ${detail.csfd}%)` : '')}</desc>\n`);
+                    if (detail.format) stream.write(`<category lang="${this.language}">${this.htmlEncode(detail.format)}</category>\n`);
+                    if (detail.images && detail.images.poster) stream.write(`<icon src="${detail.images.poster}"></icon>\n`);
+                    stream.write(`</programme>\n\n`);
+                })
+                console.log(`Day ${i} completed`);
+            } catch (e) {
+                console.error(`Failed fetching day ${i}`, e);
+                continue;
+            }
         }
 
         stream.write('</tv>');
